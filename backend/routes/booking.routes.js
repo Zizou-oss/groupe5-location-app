@@ -1,16 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const Booking = require('../models/Booking');
 const verifyToken = require('../middleware/authMiddleware');
 const checkRole = require('../middleware/roleMiddleware');
 
+// ⚙️ Config multer pour upload image
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/bookings');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  },
+});
+const upload = multer({ storage });
+
 // ➕ POST /bookings → créer une demande (locataire uniquement)
-router.post('/', verifyToken, checkRole(['renter']), async (req, res) => {
+router.post('/', verifyToken, checkRole(['renter']), upload.array('images'), async (req, res) => {
   try {
     const { propertyId, message, ownerId, propertyTitle, renterName } = req.body;
     if (!propertyId || !ownerId) {
       return res.status(400).json({ message: "Champs requis manquants" });
     }
+
+    const imagePaths = req.files ? req.files.map(file => `/uploads/bookings/${file.filename}`) : [];
 
     const newBooking = new Booking({
       propertyId,
@@ -19,6 +34,7 @@ router.post('/', verifyToken, checkRole(['renter']), async (req, res) => {
       propertyTitle,
       ownerId,
       message,
+      images: imagePaths,
       status: 'pending',
       createdAt: new Date(),
     });

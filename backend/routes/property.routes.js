@@ -1,29 +1,53 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const Property = require('../models/Property');
-const verifyToken = require('../middleware/authMiddleware');  // Middleware JWT
-const checkRole = require('../middleware/roleMiddleware');    // Middleware rôle
+const verifyToken = require('../middleware/authMiddleware');
+const checkRole = require('../middleware/roleMiddleware');
+const path = require('path');
+const fs = require('fs');
 
-// ➕ Créer une propriété (seulement bailleurs)
+// 📁 Configuration de multer pour l'upload des images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = 'uploads/properties';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  },
+});
+const upload = multer({ storage });
+
+// ➕ Créer une propriété (avec upload d'images)
 router.post(
   '/',
   verifyToken,
   checkRole(['landlord']),
+  upload.array('images'), // ⚠️ Reçoit des fichiers
   async (req, res) => {
     try {
-      const { title, city, price, size, features } = req.body;
+      const { title, city, price, size, description, features } = req.body;
 
       if (!title || !city || !price) {
         return res.status(400).json({ message: "Title, city et price sont obligatoires." });
       }
+
+      // 📷 Extraire les chemins des images
+      const imagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
 
       const newProperty = new Property({
         title,
         city,
         price,
         size,
+        description, // Ajout de la description
         features,
-        ownerId: req.user.userId, // ID récupéré depuis le token décodé
+        images: imagePaths,
+        ownerId: req.user.userId,
       });
 
       const savedProperty = await newProperty.save();
@@ -34,7 +58,7 @@ router.post(
   }
 );
 
-// 🔍 Récupérer toutes les propriétés avec filtres optionnels
+// 🔍 Récupérer toutes les propriétés
 router.get('/', async (req, res) => {
   try {
     const { city, minPrice, maxPrice } = req.query;
@@ -54,7 +78,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✏️ Modifier une propriété (seulement propriétaire bailleur)
+// ✏️ Modifier une propriété
 router.put('/:id', verifyToken, checkRole(['landlord']), async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
@@ -72,7 +96,7 @@ router.put('/:id', verifyToken, checkRole(['landlord']), async (req, res) => {
   }
 });
 
-// ❌ Supprimer une propriété (seulement propriétaire bailleur)
+// ❌ Supprimer une propriété
 router.delete('/:id', verifyToken, checkRole(['landlord']), async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
@@ -89,7 +113,7 @@ router.delete('/:id', verifyToken, checkRole(['landlord']), async (req, res) => 
   }
 });
 
-// ✅ Récupérer une propriété par son ID (publique)
+// ✅ Récupérer une propriété par ID
 router.get('/:id', async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);

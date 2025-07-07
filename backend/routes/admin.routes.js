@@ -26,7 +26,7 @@ router.delete('/users/:id', verifyToken, checkRole(['admin']), async (req, res) 
 });
 
 // ✅ DELETE une maison (ADMIN uniquement)
-router.delete('/properties/:id', verifyToken, checkRole(['admin']), async (req, res) => {
+router.delete('/properties/:id', verifyToken, checkRole(['landlord', 'admin']), async (req, res) => {
   try {
     await Property.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: 'Propriété supprimée' });

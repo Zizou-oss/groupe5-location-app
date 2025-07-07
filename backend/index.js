@@ -13,6 +13,7 @@ app.use(express.json());
 connectDB();
 
 // Routes
+app.use('/uploads', express.static('uploads'));
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/properties', require('./routes/property.routes'));
 app.use('/bookings', require('./routes/booking.routes'));

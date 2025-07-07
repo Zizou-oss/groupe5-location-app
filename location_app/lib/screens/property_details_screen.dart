@@ -18,6 +18,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   Map<String, dynamic>? property;
   bool isLoading = true;
   bool isOwner = false;
+  String? role;
+
+  final String baseUrl = 'http://192.168.100.136:3000';
 
   @override
   void initState() {
@@ -26,25 +29,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Future<void> _loadProperty() async {
-    print("🔎 Chargement du bien avec ID : ${widget.propertyId}");
     try {
       final data = await apiService.getPropertyById(widget.propertyId);
-      print("✅ Données reçues : $data");
-
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId');
+      role = prefs.getString('role');
 
       setState(() {
-        property = data;
-        isOwner = data['ownerId'] == userId;
+        property = Map<String, dynamic>.from(data);
+        isOwner = data['ownerId'] == userId || role == 'admin';
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Erreur de chargement du bien : $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erreur de chargement")),
       );
-      Navigator.pop(context);
+      Navigator.pop(this.context, true);
     }
   }
 
@@ -64,7 +64,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     if (confirm != true) return;
 
     try {
-      await apiService.deleteProperty(widget.propertyId);
+      if (role == 'landlord' || role == 'admin') {
+        await apiService.deletePropertyAsAdmin(widget.propertyId);
+      } else {
+        await apiService.deleteProperty(widget.propertyId);
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bien supprimé avec succès")));
       Navigator.pop(context, true);
     } catch (e) {
@@ -91,7 +96,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (images.isNotEmpty)
-              Image.network(images[0], height: 250, width: double.infinity, fit: BoxFit.cover)
+              SizedBox(
+                height: 250,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: images.length,
+                  itemBuilder: (context, index) {
+                    final imageUrl = images[index].toString().startsWith('http')
+                        ? images[index]
+                        : '$baseUrl${images[index]}';
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Image.network(
+                        imageUrl,
+                        width: 300,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 300,
+                            color: Colors.grey[300],
+                            child: Center(child: Icon(Icons.broken_image, size: 50)),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              )
             else
               Container(
                 height: 250,
@@ -109,7 +140,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     children: [
                       Icon(Icons.location_on, color: Colors.grey[700]),
                       SizedBox(width: 4),
-                      Text(property!['location'] ?? 'Non précisé', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
+                      Text(property!['city'] ?? 'Non précisé', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                     ],
                   ),
                   SizedBox(height: 16),
@@ -137,7 +168,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => EditPropertyScreen(property: property!),
+                                builder: (_) => EditPropertyScreen(property: Map<String, dynamic>.from(property!)),
                               ),
                             );
                             if (result == true) {

@@ -22,13 +22,11 @@ class ApiService {
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/auth/login');
-    final res = await http
-        .post(
-          url,
-          headers: _jsonHeaders(),
-          body: jsonEncode({'email': email, 'password': password}),
-        )
-        .timeout(Duration(seconds: 10));
+    final res = await http.post(
+      url,
+      headers: _jsonHeaders(),
+      body: jsonEncode({'email': email, 'password': password}),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
@@ -45,22 +43,13 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> register(
-    String email,
-    String password,
-    String role,
-  ) async {
+      String email, String password, String role) async {
     final url = Uri.parse('$baseUrl/auth/register');
-    final res = await http
-        .post(
-          url,
-          headers: _jsonHeaders(),
-          body: jsonEncode({
-            'email': email,
-            'password': password,
-            'role': role,
-          }),
-        )
-        .timeout(Duration(seconds: 10));
+    final res = await http.post(
+      url,
+      headers: _jsonHeaders(),
+      body: jsonEncode({'email': email, 'password': password, 'role': role}),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode == 201) {
       return jsonDecode(res.body);
@@ -72,56 +61,42 @@ class ApiService {
 
   Future<List<dynamic>> getProperties() async {
     final url = Uri.parse('$baseUrl/properties');
+    final res = await http.get(url, headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    }).timeout(Duration(seconds: 10));
 
-    print("📡 Envoi requête à : $url");
-
-    try {
-      final res = await http
-          .get(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache',
-            },
-          )
-          .timeout(Duration(seconds: 10));
-
-      print("⬅️ Code HTTP : ${res.statusCode}");
-      print("⬅️ Réponse body : ${res.body}");
-
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      } else {
-        throw Exception("Erreur chargement : ${res.statusCode} - ${res.body}");
-      }
-    } catch (e) {
-      print("❌ Exception HTTP : $e");
-      rethrow;
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      throw Exception("Erreur chargement : ${res.statusCode}");
     }
   }
 
   Future<void> addProperty(Map<String, dynamic> property) async {
     final token = await _getToken();
     final url = Uri.parse('$baseUrl/properties');
-
-    final res = await http
-        .post(url, headers: _jsonHeaders(token), body: jsonEncode(property))
-        .timeout(Duration(seconds: 10));
+    final res = await http.post(
+      url,
+      headers: _jsonHeaders(token),
+      body: jsonEncode(property),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode != 201) {
       final error = jsonDecode(res.body);
-      throw Exception(error['message'] ?? 'Échec de l’ajout de propriété');
+      throw Exception(error['message'] ?? 'Échec de l’ajout');
     }
   }
 
   Future<void> updateProperty(String id, Map<String, dynamic> data) async {
     final token = await _getToken();
     final url = Uri.parse('$baseUrl/properties/$id');
-
-    final res = await http
-        .put(url, headers: _jsonHeaders(token), body: jsonEncode(data))
-        .timeout(Duration(seconds: 10));
+    final res = await http.put(
+      url,
+      headers: _jsonHeaders(token),
+      body: jsonEncode(data),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body);
@@ -129,47 +104,13 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getUsers() async {
-    final token = await _getToken();
-    final url = Uri.parse('$baseUrl/admin/users');
-
-    print("📡 Appel API : $url");
-    try {
-      final res = await http.get(url, headers: _jsonHeaders(token));
-      print("⬅️ Status code: ${res.statusCode}");
-      print("⬅️ Body: ${res.body}");
-
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      } else {
-        final error = jsonDecode(res.body);
-        throw Exception(error['message'] ?? 'Erreur inconnue');
-      }
-    } catch (e) {
-      print("❌ Erreur dans getUsers: $e");
-      rethrow;
-    }
-  }
-
-  // Supprimer un utilisateur (admin)
-  Future<void> deleteUser(String userId) async {
-    final token = await _getToken();
-    final url = Uri.parse('$baseUrl/admin/users/$userId');
-
-    final res = await http.delete(url, headers: _jsonHeaders(token));
-    if (res.statusCode != 200) {
-      final error = jsonDecode(res.body);
-      throw Exception(error['message'] ?? 'Erreur suppression utilisateur');
-    }
-  }
-
   Future<void> deleteProperty(String id) async {
     final token = await _getToken();
     final url = Uri.parse('$baseUrl/properties/$id');
-
-    final res = await http
-        .delete(url, headers: _jsonHeaders(token))
-        .timeout(Duration(seconds: 10));
+    final res = await http.delete(
+      url,
+      headers: _jsonHeaders(token),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body);
@@ -188,29 +129,23 @@ class ApiService {
     final renterId = prefs.getString('userId');
     final renterName = prefs.getString('userName');
 
-    if (renterId == null || renterName == null) {
-      throw Exception("Données utilisateur manquantes");
-    }
-
     final url = Uri.parse('$baseUrl/bookings');
-    final res = await http
-        .post(
-          url,
-          headers: _jsonHeaders(token),
-          body: jsonEncode({
-            "propertyId": propertyId,
-            "propertyTitle": propertyTitle,
-            "renterId": renterId,
-            "renterName": renterName,
-            "ownerId": ownerId,
-            "message": message,
-          }),
-        )
-        .timeout(Duration(seconds: 10));
+    final res = await http.post(
+      url,
+      headers: _jsonHeaders(token),
+      body: jsonEncode({
+        "propertyId": propertyId,
+        "propertyTitle": propertyTitle,
+        "renterId": renterId,
+        "renterName": renterName,
+        "ownerId": ownerId,
+        "message": message,
+      }),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode != 201) {
       final error = jsonDecode(res.body);
-      throw Exception(error['message'] ?? 'Erreur lors de la réservation');
+      throw Exception(error['message'] ?? 'Erreur réservation');
     }
   }
 
@@ -218,19 +153,18 @@ class ApiService {
     final token = await _getToken();
     final prefs = await SharedPreferences.getInstance();
     final ownerId = prefs.getString('userId');
-
-    if (ownerId == null) throw Exception("ID utilisateur manquant");
-
     final url = Uri.parse('$baseUrl/bookings/owner/$ownerId');
-    final res = await http
-        .get(url, headers: _jsonHeaders(token))
-        .timeout(Duration(seconds: 10));
+
+    final res = await http.get(
+      url,
+      headers: _jsonHeaders(token),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     } else {
       final error = jsonDecode(res.body);
-      throw Exception(error['message'] ?? 'Erreur lors du chargement');
+      throw Exception(error['message'] ?? 'Erreur chargement');
     }
   }
 
@@ -238,27 +172,50 @@ class ApiService {
     final token = await _getToken();
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('userId');
-
-    if (userId == null) throw Exception("ID utilisateur manquant");
-
     final url = Uri.parse('$baseUrl/bookings/$userId');
-    final res = await http
-        .get(url, headers: _jsonHeaders(token))
-        .timeout(Duration(seconds: 10));
+
+    final res = await http.get(
+      url,
+      headers: _jsonHeaders(token),
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     } else {
       final error = jsonDecode(res.body);
-      throw Exception(error['message'] ?? 'Erreur lors du chargement');
+      throw Exception(error['message'] ?? 'Erreur chargement');
     }
   }
 
-  // ✅ Supprimer une propriété (admin)
+  Future<List<dynamic>> getUsers() async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/admin/users');
+    final res = await http.get(
+      url,
+      headers: _jsonHeaders(token),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
+    } else {
+      final error = jsonDecode(res.body);
+      throw Exception(error['message'] ?? 'Erreur inconnue');
+    }
+  }
+
+  Future<void> deleteUser(String userId) async {
+    final token = await _getToken();
+    final url = Uri.parse('$baseUrl/admin/users/$userId');
+    final res = await http.delete(url, headers: _jsonHeaders(token));
+    if (res.statusCode != 200) {
+      final error = jsonDecode(res.body);
+      throw Exception(error['message'] ?? 'Erreur suppression utilisateur');
+    }
+  }
+
   Future<void> deletePropertyAsAdmin(String id) async {
     final token = await _getToken();
     final url = Uri.parse('$baseUrl/admin/properties/$id');
-
     final res = await http.delete(url, headers: _jsonHeaders(token));
     if (res.statusCode != 200) {
       final error = jsonDecode(res.body);
@@ -266,14 +223,11 @@ class ApiService {
     }
   }
 
-  // ✅ Modifier une propriété (admin)
-  Future<void> updatePropertyAsAdmin(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
+  
+
+  Future<void> updatePropertyAsAdmin(String id, Map<String, dynamic> data) async {
     final token = await _getToken();
     final url = Uri.parse('$baseUrl/admin/properties/$id');
-
     final res = await http.put(
       url,
       headers: _jsonHeaders(token),
@@ -287,21 +241,14 @@ class ApiService {
 
   Future<Map<String, dynamic>> getPropertyById(String id) async {
     final url = Uri.parse('$baseUrl/properties/$id');
-    print("➡️ Requête GET : $url");
-
-    final res = await http
-        .get(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-          },
-        )
-        .timeout(Duration(seconds: 10));
-
-    print("⬅️ Code : ${res.statusCode}");
-    print("⬅️ Body : ${res.body}");
+    final res = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    ).timeout(Duration(seconds: 10));
 
     if (res.statusCode == 200) {
       return jsonDecode(res.body);

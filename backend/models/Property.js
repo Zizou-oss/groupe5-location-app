@@ -5,9 +5,11 @@ const propertySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  images: [{ type: String }],
   city: String,
   price: Number,
   size: String,
+  description: String,
   features: [String],
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,

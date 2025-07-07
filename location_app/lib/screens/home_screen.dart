@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:location_app/screens/property_details_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/api_service.dart' show baseUrl; // 👈 utile pour les images
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -40,6 +41,13 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
+  /// 🔧 Génère une URL d’image correcte à partir du chemin brut
+  String buildImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '$baseUrl$path';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,6 +70,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.all(10),
                   itemBuilder: (context, index) {
                     final prop = properties[index];
+
+                    // 🔧 Récupère l’image à afficher
+                    final imageUrl = buildImageUrl(
+                      prop['images'] != null && prop['images'].isNotEmpty
+                          ? prop['images'][0]
+                          : '',
+                    );
+
                     return Card(
                       margin: EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
@@ -85,17 +101,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-                              child: prop['images'] != null && prop['images'].isNotEmpty
+                              child: imageUrl.isNotEmpty
                                   ? Image.network(
-                                      prop['images'][0],
+                                      imageUrl,
                                       height: 180,
                                       width: double.infinity,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        height: 180,
+                                        color: Colors.grey[300],
+                                        child: Icon(Icons.broken_image, size: 50),
+                                      ),
                                     )
                                   : Container(
                                       height: 180,
                                       color: Colors.grey[300],
-                                      child: Center(child: Icon(Icons.image, size: 60, color: Colors.grey[600])),
+                                      child: Center(
+                                        child: Icon(Icons.image_not_supported, size: 60, color: Colors.grey[600]),
+                                      ),
                                     ),
                             ),
                             Padding(
@@ -109,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    prop['location'] ?? 'Ville inconnue',
+                                    prop['city'] ?? 'Ville inconnue',
                                     style: TextStyle(color: Colors.grey[600]),
                                   ),
                                   SizedBox(height: 4),
