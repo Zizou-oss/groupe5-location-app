@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'widgets/app_theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -20,7 +21,7 @@ void main() {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: Colors.white,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
@@ -46,6 +47,9 @@ class MyApp extends StatelessWidget {
         title: 'Location App',
         debugShowCheckedModeBanner: false,
         
+        // Use our custom theme
+        theme: AppTheme.lightTheme,
+        
         // Performance optimizations
         builder: (context, child) {
           return MediaQuery(
@@ -56,22 +60,6 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         },
-        
-        // Theme optimization
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.light,
-          ),
-          // Optimize animations
-          pageTransitionsTheme: const PageTransitionsTheme(
-            builders: {
-              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            },
-          ),
-        ),
         
         initialRoute: '/login',
         routes: {
@@ -85,21 +73,55 @@ class MyApp extends StatelessWidget {
           builder: (_) => Scaffold(
             appBar: AppBar(
               title: const Text("Erreur"),
-              backgroundColor: Colors.red.shade50,
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: Colors.white,
             ),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text(
-                    "Page non trouvée",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                  ),
-                  SizedBox(height: 8),
-                  Text("Veuillez vérifier l'URL et réessayer."),
-                ],
+            body: Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppTheme.spacing32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(AppTheme.spacing24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: AppTheme.errorColor,
+                      ),
+                    ),
+                    SizedBox(height: AppTheme.spacing24),
+                    Text(
+                      "Page non trouvée",
+                      style: AppTheme.heading2.copyWith(
+                        color: AppTheme.errorColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppTheme.spacing8),
+                    Text(
+                      "La page que vous recherchez n'existe pas.\nVeuillez vérifier l'URL et réessayer.",
+                      style: AppTheme.bodyMedium.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppTheme.spacing24),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/login',
+                        (route) => false,
+                      ),
+                      icon: Icon(Icons.home),
+                      label: Text('Retour à l\'accueil'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
